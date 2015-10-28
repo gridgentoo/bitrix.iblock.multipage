@@ -1,4 +1,4 @@
-# iblock_mulipage
+# iblock-multipage
 Многостраничный компонент на инфоблоках
 
 ```php
