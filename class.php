@@ -28,6 +28,34 @@ class IblockMultypage extends CBitrixComponent
 			return $this->arParams['ROUTES'];
 		
 		if (isset($this->arParams['CATEGORIES']) && $this->arParams['CATEGORIES'] == 'Y')
+		{
+			if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS')
+			{
+				return [
+					[
+						'METHOD' => 'GET, POST',
+						'URL' => '/',
+						'NAME' => 'elements',
+						'CONTROLLER' => 'Elements',
+						'ACTION' => 'index'
+					],
+					[
+						'METHOD' => 'GET, POST',
+						'URL' => '/:category',
+						'NAME' => 'category',
+						'CONTROLLER' => 'Category',
+						'ACTION' => 'index'
+					],
+					[
+						'METHOD' => 'GET, POST',
+						'URL' => '/:category/:element',
+						'NAME' => 'element',
+						'CONTROLLER' => 'Element',
+						'ACTION' => 'index'
+					],
+				];
+			}
+			
 			return [
 				[
 					'METHOD' => 'GET, POST',
@@ -51,6 +79,8 @@ class IblockMultypage extends CBitrixComponent
 					'ACTION' => 'index'
 				],
 			];
+		}
+			
 		
 		return [
 			[

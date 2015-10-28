@@ -10,24 +10,24 @@ class ElementsController extends BaseController
 	{
 		global $APPLICATION;
 		
-		$get_params = $_GET['PAGEN_1'] ?: $_GET['PAGEN_2'] ?: $_GET['PAGEN_3'] ?: '';
-		$cache_id = $APPLICATION->GetCurDir() . $get_params;
+		$filter_get = isset($this->bitrix->arParams['FILTER']) ? $this->bitrix->arParams['FILTER'] : [];
 		
-		$arNavParams = [
-			"nPageSize" => $this->bitrix->arParams['PAGINATION'] ?: 10,
-			"bDescPageNumbering" => false,
-			"bShowAll" => false,
-		];
-		$arNavigation = \CDBResult::GetNavParams($arNavParams);
+		$pages_count = $this->bitrix->arParams['PAGINATION']['COUNT'] ?: 10;
+		$nav = \CDBResult::NavStringForCache($pages_count);
+		$cache_id = $APPLICATION->GetCurDir() . $nav . implode('', $filter_get);
 		
-		if ( $this->bitrix->StartResultCache(false, $cache_id, $arNavigation) )
+		if ( $this->bitrix->StartResultCache(false, $cache_id) )
 		{
+			$filter_standart = [
+				'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
+				'ACTIVE' => 'Y',
+				'ACTIVE_DATE' => $this->bitrix->arParams['ACTIVE_DATE'] ?: ''
+			];
+			
+			$filter = array_merge($filter_standart, $filter_get);
+			
 			$this->bitrix->arResult = Elements::getElements(
-				[
-					'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
-					'ACTIVE' => 'Y',
-					'ACTIVE_DATE' => $this->bitrix->arParams['ACTIVE_DATE'] ?: 'N'
-				], 
+				$filter, 
 				$this->bitrix->arParams['SORT']['ELEMENTS'], 
 				$this->bitrix->arParams['PAGINATION'],
 				$this->bitrix->arParams['IMG_CACHE']['ELEMENTS']

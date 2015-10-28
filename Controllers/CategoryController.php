@@ -13,17 +13,13 @@ class CategoryController extends BaseController
 	{		
 		global $APPLICATION;
 		
-		$get_params = $_GET['PAGEN_1'] ?: $_GET['PAGEN_2'] ?: $_GET['PAGEN_3'] ?: '';
-		$cache_id = $APPLICATION->GetCurDir() . $get_params;
+		$filter_get = isset($this->bitrix->arParams['FILTER']) ? $this->bitrix->arParams['FILTER'] : [];
 		
-		$arNavParams = [
-			"nPageSize" => $this->bitrix->arParams['PAGINATION'],
-			"bDescPageNumbering" => false,
-			"bShowAll" => false,
-		];
-		$arNavigation = \CDBResult::GetNavParams($arNavParams);
+		$pages_count = $this->bitrix->arParams['PAGINATION']['COUNT'] ?: 10;
+		$nav = \CDBResult::NavStringForCache($pages_count);
+		$cache_id = $APPLICATION->GetCurDir() . $nav . implode('', $filter_get);
 		
-		if ( $this->bitrix->StartResultCache(false, $cache_id, $arNavigation) )
+		if ( $this->bitrix->StartResultCache(false, $cache_id) )
 		{
 			$this->bitrix->arResult['SECTION'] = $this->getSection();
 
@@ -106,13 +102,19 @@ class CategoryController extends BaseController
 	 */
 	protected function getElements()
 	{
+		$filter_get = isset($this->bitrix->arParams['FILTER']) ? $this->bitrix->arParams['FILTER'] : [];
+		
+		$filter_standart = [
+			'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
+			'ACTIVE' => 'Y',
+			'ACTIVE_DATE' => $this->bitrix->arParams['ACTIVE_DATE'] ?: '',
+			'SECTION_ID' => $this->bitrix->arResult['SECTION']['ID']
+		];
+		
+		$filter = array_merge($filter_standart, $filter_get);
+		
 		$items = Elements::getElements(
-			[
-				'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
-				'ACTIVE' => 'Y',
-				'ACTIVE_DATE' => $this->bitrix->arParams['ACTIVE_DATE'] ?: 'N',
-				'SECTION_ID' => $this->bitrix->arResult['SECTION']['ID']
-			], 
+			$filter,
 			$this->bitrix->arParams['SORT']['ELEMENTS'], 
 			$this->bitrix->arParams['PAGINATION'],
 			$this->bitrix->arParams['IMG_CACHE']['ELEMENTS']
