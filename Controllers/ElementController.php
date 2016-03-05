@@ -1,27 +1,30 @@
 <?php
 
-namespace IblockMultypage\Controllers;
+namespace IblockMultipageComponent\Controllers;
 
-use Libs\Iblock\Elements;
-use Libs\Iblock\Sections;
+use Bitrix\Iblock\InheritedProperty\ElementValues;
+use Falur\Bitrix\Iblock\Elements;
+use Falur\Bitrix\Iblock\Sections;
 
 class ElementController extends BaseController
 {
 	public function indexAction()
 	{
 		global $APPLICATION;
-		
-		if ( $this->bitrix->StartResultCache(false, $APPLICATION->GetCurDir()) )
-		{
+
+        $curdir = $APPLICATION->GetCurDir();
+
+		if ($this->bitrix->StartResultCache(false, $curdir)) {
 			$this->bitrix->arResult = $this->getElement();
 			
-			if (empty($this->bitrix->arResult) || $this->bitrix->arResult['DETAIL_PAGE_URL'] != $APPLICATION->GetCurDir())
-				return $this->error404();
+			if (empty($this->bitrix->arResult) || $this->bitrix->arResult['DETAIL_PAGE_URL'] != $curdir) {
+                return $this->error404();
+            }	
 			
 			$this->bitrix->arResult['IPROPERTY_VALUES'] = 
-				(new \Bitrix\Iblock\InheritedProperty\ElementValues(
-						$this->bitrix->arResult['IBLOCK_ID'], 
-						$this->bitrix->arResult['ID']
+				(new ElementValues(
+                    $this->bitrix->arResult['IBLOCK_ID'],
+                    $this->bitrix->arResult['ID']
 				))->getValues();
 			
 			$this->bitrix->arResult['SECTION_PATH'] = 
@@ -30,7 +33,10 @@ class ElementController extends BaseController
 					$this->bitrix->arResult['IBLOCK_SECTION_ID']
 				);
 			
-			$this->bitrix->SetResultCacheKeys(['ID', 'NAME', 'DETAIL_PAGE_URL', 'IPROPERTY_VALUES', 'SECTION_PATH']);
+			$this->bitrix->SetResultCacheKeys([
+                'ID', 'NAME', 'DETAIL_PAGE_URL', 'IPROPERTY_VALUES', 'SECTION_PATH'
+            ]);
+            
 			$this->bitrix->IncludeComponentTemplate('element');
 		}
 		
@@ -94,8 +100,7 @@ class ElementController extends BaseController
 		// Установим хлебные крошки		
 		$section_path = $this->bitrix->arResult['SECTION_PATH'];
 
-		foreach ($section_path as $section)
-		{
+		foreach ($section_path as $section) {
 			$APPLICATION->AddChainItem(
 				$section['NAME'], 
 				$section['SECTION_PAGE_URL']

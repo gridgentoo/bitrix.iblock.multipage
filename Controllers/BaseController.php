@@ -1,6 +1,6 @@
 <?php
 
-namespace IblockMultypage\Controllers;
+namespace IblockMultipageComponent\Controllers;
 
 class BaseController
 {

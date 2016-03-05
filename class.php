@@ -2,13 +2,13 @@
 
 use Symfony\Component\ClassLoader\Psr4ClassLoader;
 
-class IblockMultypage extends CBitrixComponent
+class IblockMultypageComponent extends CBitrixComponent
 {
 	public function registerAutoload()
 	{
 		$loader = new Psr4ClassLoader();
 
-		$loader->addPrefix('IblockMultypage', __DIR__);
+		$loader->addPrefix('IblockMultypageComponent', __DIR__);
 
 		$loader->register();
 	}
@@ -17,20 +17,24 @@ class IblockMultypage extends CBitrixComponent
 	{
 		$controller = "IblockMultypage\\Controllers\\{$controller}Controller";
 		$action = "{$action}Action";
-		$c = new $controller($bitrix, $slim);
-		if ($c->beforeExecuteAction()) $c->$action();
+
+        $c = new $controller($bitrix, $slim);
+
+        if ($c->beforeExecuteAction()) {
+            $c->$action();
+        }
+        
 		$c->afterExecuteAction();
 	}
 	
 	public function getRoutes()
 	{
-		if (!empty($this->arParams['ROUTES']))
-			return $this->arParams['ROUTES'];
-		
-		if (isset($this->arParams['CATEGORIES']) && $this->arParams['CATEGORIES'] == 'Y')
-		{
-			if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS')
-			{
+		if (!empty($this->arParams['ROUTES'])) {
+            return $this->arParams['ROUTES'];
+        }
+
+        if (isset($this->arParams['CATEGORIES']) && $this->arParams['CATEGORIES'] == 'Y') {
+			if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS') 			{
 				return [
 					[
 						'METHOD' => 'GET, POST',
@@ -109,21 +113,17 @@ class IblockMultypage extends CBitrixComponent
 		$bitrix = $this;
 		$sef    = rtrim($this->arParams['SEF_URL'], '/');	
 
-		foreach ($routes as $route)
-		{		
+		foreach ($routes as $route) {
 			$url = $route['URL'] != '/' ? $sef . $route['URL'] : $route['URL'];
 			$url .= '(/)';
 
-			if ($route['METHOD'] == 'GET, POST')
-			{
+			if ($route['METHOD'] == 'GET, POST') {
 				$slim->map($url, function() use($bitrix, $slim, $route) {
 
 					$bitrix->executeAction($bitrix, $slim, $route['CONTROLLER'], $route['ACTION']);
 
 				})->via('GET', 'POST')->name($route['NAME']);
-			}
-			else
-			{
+			} else {
 				$method = strtolower($route['METHOD']);
 				$slim->$method($url, function() use($bitrix, $slim, $route) {
 

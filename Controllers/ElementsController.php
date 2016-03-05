@@ -1,8 +1,9 @@
 <?php
 
-namespace IblockMultypage\Controllers;
+namespace IblockMultipageComponent\Controllers;
 
-use Libs\Iblock\Elements;
+use Falur\Bitrix\Iblock\Elements;
+use CDBResult;
 
 class ElementsController extends BaseController
 {
@@ -13,7 +14,7 @@ class ElementsController extends BaseController
 		$filter_get = isset($this->bitrix->arParams['FILTER']) ? $this->bitrix->arParams['FILTER'] : [];
 		
 		$pages_count = $this->bitrix->arParams['PAGINATION']['COUNT'] ?: 10;
-		$nav = \CDBResult::NavStringForCache($pages_count);
+		$nav = CDBResult::NavStringForCache($pages_count);
 		$cache_id = $APPLICATION->GetCurDir() . $nav . implode('', $filter_get);
 		
 		if ( $this->bitrix->StartResultCache(false, $cache_id) )
