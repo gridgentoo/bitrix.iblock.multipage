@@ -2,141 +2,150 @@
 
 use Symfony\Component\ClassLoader\Psr4ClassLoader;
 
-class IblockMultypageComponent extends CBitrixComponent
+class IblockMultipageComponent extends CBitrixComponent
 {
-	public function registerAutoload()
-	{
-		$loader = new Psr4ClassLoader();
+    public function registerAutoload()
+    {
+        $loader = new Psr4ClassLoader();
 
-		$loader->addPrefix('IblockMultypageComponent', __DIR__);
+        $loader->addPrefix('IblockMultipageComponent', __DIR__);
 
-		$loader->register();
-	}
-	
-	public function executeAction($bitrix, $slim, $controller, $action)
-	{
-		$controller = "IblockMultypage\\Controllers\\{$controller}Controller";
-		$action = "{$action}Action";
+        $loader->register();
+    }
+
+    public function executeAction($bitrix, $slim, $controller, $action)
+    {
+        $controller = "IblockMultipageComponent\\Controllers\\{$controller}Controller";
+        $action     = "{$action}Action";
 
         $c = new $controller($bitrix, $slim);
 
         if ($c->beforeExecuteAction()) {
             $c->$action();
         }
-        
-		$c->afterExecuteAction();
-	}
-	
-	public function getRoutes()
-	{
-		if (!empty($this->arParams['ROUTES'])) {
+
+        $c->afterExecuteAction();
+    }
+
+    public function getRoutes()
+    {
+        if (!empty($this->arParams['ROUTES'])) {
             return $this->arParams['ROUTES'];
         }
 
         if (isset($this->arParams['CATEGORIES']) && $this->arParams['CATEGORIES'] == 'Y') {
-			if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS') 			{
-				return [
-					[
-						'METHOD' => 'GET, POST',
-						'URL' => '/',
-						'NAME' => 'elements',
-						'CONTROLLER' => 'Elements',
-						'ACTION' => 'index'
-					],
-					[
-						'METHOD' => 'GET, POST',
-						'URL' => '/:category',
-						'NAME' => 'category',
-						'CONTROLLER' => 'Category',
-						'ACTION' => 'index'
-					],
-					[
-						'METHOD' => 'GET, POST',
-						'URL' => '/:category/:element',
-						'NAME' => 'element',
-						'CONTROLLER' => 'Element',
-						'ACTION' => 'index'
-					],
-				];
-			}
-			
-			return [
-				[
-					'METHOD' => 'GET, POST',
-					'URL' => '/',
-					'NAME' => 'categories',
-					'CONTROLLER' => 'Categories',
-					'ACTION' => 'index'
-				],
-				[
-					'METHOD' => 'GET, POST',
-					'URL' => '/:category',
-					'NAME' => 'category',
-					'CONTROLLER' => 'Category',
-					'ACTION' => 'index'
-				],
-				[
-					'METHOD' => 'GET, POST',
-					'URL' => '/:category/:element',
-					'NAME' => 'element',
-					'CONTROLLER' => 'Element',
-					'ACTION' => 'index'
-				],
-			];
-		}
-			
-		
-		return [
-			[
-				'METHOD' => 'GET, POST',
-				'URL' => '/',
-				'NAME' => 'elements',
-				'CONTROLLER' => 'Elements',
-				'ACTION' => 'index'
-			],
-			[
-				'METHOD' => 'GET, POST',
-				'URL' => '/:element',
-				'NAME' => 'element',
-				'CONTROLLER' => 'Element',
-				'ACTION' => 'index'
-			],
-		];
-	}
-	
-	public function executeComponent()
-	{
-		$this->registerAutoload();
+            if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS') {
+                return [
+                    [
+                        'METHOD' => 'GET, POST',
+                        'URL' => '/',
+                        'NAME' => 'elements',
+                        'CONTROLLER' => 'Elements',
+                        'ACTION' => 'index'
+                    ],
+                    [
+                        'METHOD' => 'GET, POST',
+                        'URL' => '/:category',
+                        'NAME' => 'category',
+                        'CONTROLLER' => 'Category',
+                        'ACTION' => 'index'
+                    ],
+                    [
+                        'METHOD' => 'GET, POST',
+                        'URL' => '/:category/:element',
+                        'NAME' => 'element',
+                        'CONTROLLER' => 'Element',
+                        'ACTION' => 'index'
+                    ],
+                ];
+            }
 
-		$slim   = new \Slim\Slim();
-		$routes = $this->getRoutes();
-		$bitrix = $this;
-		$sef    = rtrim($this->arParams['SEF_URL'], '/');	
+            return [
+                [
+                    'METHOD' => 'GET, POST',
+                    'URL' => '/',
+                    'NAME' => 'categories',
+                    'CONTROLLER' => 'Categories',
+                    'ACTION' => 'index'
+                ],
+                [
+                    'METHOD' => 'GET, POST',
+                    'URL' => '/:category',
+                    'NAME' => 'category',
+                    'CONTROLLER' => 'Category',
+                    'ACTION' => 'index'
+                ],
+                [
+                    'METHOD' => 'GET, POST',
+                    'URL' => '/:category/:element',
+                    'NAME' => 'element',
+                    'CONTROLLER' => 'Element',
+                    'ACTION' => 'index'
+                ],
+            ];
+        }
 
-		foreach ($routes as $route) {
-			$url = $route['URL'] != '/' ? $sef . $route['URL'] : $route['URL'];
-			$url .= '(/)';
+        return [
+            [
+                'METHOD' => 'GET, POST',
+                'URL' => '/',
+                'NAME' => 'elements',
+                'CONTROLLER' => 'Elements',
+                'ACTION' => 'index'
+            ],
+            [
+                'METHOD' => 'GET, POST',
+                'URL' => '/:element',
+                'NAME' => 'element',
+                'CONTROLLER' => 'Element',
+                'ACTION' => 'index'
+            ],
+        ];
+    }
 
-			if ($route['METHOD'] == 'GET, POST') {
-				$slim->map($url, function() use($bitrix, $slim, $route) {
+    public function executeComponent()
+    {
+        $this->registerAutoload();
 
-					$bitrix->executeAction($bitrix, $slim, $route['CONTROLLER'], $route['ACTION']);
+        $slim   = new \Slim\Slim();
+        $routes = $this->getRoutes();
+        $bitrix = $this;
+        $sef    = rtrim($this->arParams['SEF_URL'], '/');
 
-				})->via('GET', 'POST')->name($route['NAME']);
-			} else {
-				$method = strtolower($route['METHOD']);
-				$slim->$method($url, function() use($bitrix, $slim, $route) {
+        foreach ($routes as $route) {
+            $url = $route['URL'] != '/' ? $sef.$route['URL'] : $route['URL'];
+            $url .= '(/)';
 
-					$bitrix->executeAction($bitrix, $slim, $route['CONTROLLER'], $route['ACTION']);
+            if ($route['METHOD'] == 'GET, POST') {
+                $slim->map($url,
+                    function() use($bitrix, $slim, $route) {
 
-				})->name($route['NAME']);
-			}
-		}
+                    $bitrix->executeAction(
+                        $bitrix,
+                        $slim,
+                        $route['CONTROLLER'],
+                        $route['ACTION']
+                    );
+                })->via('GET', 'POST')->name($route['NAME']);
+            } else {
+                $method = strtolower($route['METHOD']);
+                $slim->$method($url,
+                    function() use($bitrix, $slim, $route) {
 
-		$slim->notFound(function() use($bitrix) {
-			$bitrix->IncludeComponentTemplate('404'); 
-		});
+                    $bitrix->executeAction(
+                        $bitrix,
+                        $slim,
+                        $route['CONTROLLER'],
+                        $route['ACTION']
+                    );
+                })->name($route['NAME']);
+            }
+        }
 
-		$slim->run();
-	}
+        $slim->notFound(function() use($bitrix) {
+            $bitrix->IncludeComponentTemplate('404');
+        });
+
+        $slim->run();
+    }
 }

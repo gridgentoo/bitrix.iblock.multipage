@@ -49,7 +49,7 @@ class BaseController
 	protected function getModel($modelName)
 	{
 		$modelName = ucfirst($modelName);
-		$class = "\\IblockMultypage\\Models\\{$modelName}Model";
+		$class = "\\IblockMultipageComponent\\Models\\{$modelName}Model";
 		return new $class($this->bitrix, $this->slim);
 	}
 }
