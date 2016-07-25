@@ -114,7 +114,7 @@ class IblockMultipageComponent extends CBitrixComponent
 
         foreach ($routes as $route) {
             $url = $route['URL'] != '/' ? $sef.$route['URL'] : $route['URL'];
-            $url .= '(/)';
+            $url .= '(/(index.php))';
 
             if ($route['METHOD'] == 'GET, POST') {
                 $slim->map($url,
