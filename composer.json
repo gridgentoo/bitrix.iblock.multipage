@@ -21,7 +21,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "Falur\\Bitrix\\Components\\IblockMultipage": "./"
+      "Falur\\Bitrix\\Components\\IblockMultipage\\": "./"
     }
   },
   "minimum-stability": "dev",
