@@ -1,183 +1,89 @@
 <?php
 
-namespace IblockMultipageComponent\Controllers;
+namespace Falur\Bitrix\Components\IblockMultipage\Controllers;
 
 use Bitrix\Iblock\InheritedProperty\SectionValues;
-use Falur\Bitrix\Iblock\Sections;
-use Falur\Bitrix\Iblock\Elements;
+use Falur\Bitrix\Components\IblockMultipage\Services\Sections as SectionsService;
+use Falur\Bitrix\Components\IblockMultipage\Services\Elements as ElementsService;
 use CDBResult;
+use Falur\Bitrix\Support\Component\BaseController;
 
+/**
+ * Class CategoryController
+ * @package Falur\Bitrix\Components\IblockMultipage\Controllers
+ * @property \IblockMultipageComponent $component
+ * @property SectionsService $sections
+ * @property ElementsService $elements
+ */
 class CategoryController extends BaseController
 {
-    protected $pagination;
-
-    public function indexAction()
+    /**
+     * @param $request
+     * @param $response
+     * @param $args
+     * @throws \Slim\Exception\NotFoundException
+     */
+    public function index($request, $response, $args)
     {
-        global $APPLICATION;
+        $additionalFilter = $this->component->param('FILTER', []);
+        $paginationCount = $this->component->param('PAGINATION_COUNT');
+        $nav = CDBResult::NavStringForCache($paginationCount);
+        $cacheId = application()->GetCurDir() . $nav . implode('', $additionalFilter);
 
-        $filter_get = isset($this->bitrix->arParams['FILTER'])
-                      ? $this->bitrix->arParams['FILTER']
-                      : [];
+        if ($this->component->startResultCache(false, $cacheId)) {
+            // Section
+            $section = $this->sections->one($args['category']);
+            $this->notFoundExceptionIf(!$section);
 
-        $pages_count = $this->bitrix->arParams['PAGINATION']['COUNT'] ? : 10;
-        $nav         = CDBResult::NavStringForCache($pages_count);
-        $cache_id    = $APPLICATION->GetCurDir() . $nav.  implode('', $filter_get);
+            // Sections
+            $sections = $this->sections->childs($section['ID']);
 
-        if ($this->bitrix->StartResultCache(false, $cache_id)) {
-            $this->bitrix->arResult['SECTION'] = $this->getSection();
+            // MetaInfo
+            $sectionPath = \CIBlockSection::GetNavChain($section['IBLOCK_ID'], $section['IBLOCK_SECTION_ID']);
+            $propValues = (new SectionValues($section['IBLOCK_ID'], $section['ID']))->getValues();
 
-            if (empty($this->bitrix->arResult['SECTION'])) {
-                return $this->error404();
+            // Items
+            if (!isset($additionalFilter['SECTION_ID'])) {
+                $additionalFilter['SECTION_ID'] = $section['ID'];
             }
+            [$items, $pagination] = $this->elements->withPagination($additionalFilter);
 
-            $this->bitrix->arResult['ITEMS']      = $this->getElements();
-            $this->bitrix->arResult['SECTIONS']   = $this->getSections();
-            $this->bitrix->arResult['PAGINATION'] = $this->getPagination();
+            $this->component->SetResultCacheKeys(['SECTION', 'IPROPERTY_VALUES', 'SECTION_PATH']);
 
-            $this->bitrix->arResult['SECTION_PATH'] = Sections::getPath(
-                $this->bitrix->arParams['IBLOCK_ID'],
-                $this->bitrix->arResult['SECTION']['IBLOCK_SECTION_ID']
-            );
-
-            $this->bitrix->arResult['IPROPERTY_VALUES'] = (new SectionValues(
-                $this->bitrix->arResult['SECTION']['IBLOCK_ID'],
-                $this->bitrix->arResult['SECTION']['ID']
-            ))->getValues();
-
-            $this->bitrix->SetResultCacheKeys(['SECTION', 'IPROPERTY_VALUES', 'SECTION_PATH']);
-            $this->bitrix->IncludeComponentTemplate('category');
+            $this->component->view('category', [
+                'ITEMS'            => $items,
+                'SECTION'          => $section,
+                'SECTIONS'         => $sections,
+                'PAGINATION'       => $pagination,
+                'SECTION_PATH'     => $sectionPath,
+                'IPROPERTY_VALUES' => $propValues,
+            ]);
         }
 
-        $this->setMetaInfo();
+        $this->setMeta();
+        $this->setBreadcrumbs();
     }
 
-    public function getPagination()
+    protected function setMeta()
     {
-        return $this->pagination;
+        $iprops = $this->component->arResult['IPROPERTY_VALUES'];
+        $section = $this->component->arResult['SECTION'];
+
+        $this->component->setTitle($iprops['SECTION_PAGE_TITLE'] ?: $section['NAME']);
+        $this->component->setMeta('title', $iprops['SECTION_META_TITLE']);
+        $this->component->setMeta('keywords', $iprops['SECTION_META_KEYWORDS']);
+        $this->component->setMeta('description', $iprops['SECTION_META_DESCRIPTION']);
     }
 
-    /**
-     * Получить информацию по текущей категории
-     *
-     * @return array
-     */
-    protected function getSection()
+    protected function setBreadcrumbs()
     {
-        $section_code = $this->slim->router->getCurrentRoute()->getParam('category');
+        $sectionPath = $this->component->arResult['SECTION_PATH'];
+        $section = $this->component->arResult['SECTION'];
 
-        return Sections::getSection(
-            [
-                'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
-                'ACTIVE'    => 'Y',
-                'CODE'      => $section_code
-            ],
-            $this->bitrix->arParams['IMG_CACHE']['CATEGORIES']
-        );
-    }
-
-    /**
-     * Получить дочерние категории
-     * 
-     * @return array
-     */
-    protected function getSections()
-    {
-        $sections = Sections::getSections(
-            [
-                'IBLOCK_ID'     => $this->bitrix->arParams['IBLOCK_ID'],
-                'ACTIVE'        => 'Y',
-                'GLOBAL_ACTIVE' => 'Y',
-                'CNT_ACTIVE'    => 'Y',
-                'SECTION_ID'    => $this->bitrix->arResult['SECTION']['ID']
-            ],
-            $this->bitrix->arParams['SORT']['CATEGORIES'],
-            $this->bitrix->arParams['IMG_CACHE']['CATEGORIES']
-        );
-
-        return $sections['SECTIONS'];
-    }
-
-    /**
-     * Получить элементы категории
-     * 
-     * @return array
-     */
-    protected function getElements()
-    {
-        $filter_get = isset($this->bitrix->arParams['FILTER'])
-                      ? $this->bitrix->arParams['FILTER']
-                      : [];
-
-        $filter_standart = [
-            'IBLOCK_ID'     => $this->bitrix->arParams['IBLOCK_ID'],
-            'ACTIVE'        => 'Y',
-            'ACTIVE_DATE'   => $this->bitrix->arParams['ACTIVE_DATE'] ? : '',
-            'SECTION_ID'    => $this->bitrix->arResult['SECTION']['ID']
-        ];
-
-        $filter = array_merge($filter_standart, $filter_get);
-
-        $items = Elements::getElements(
-            $filter, $this->bitrix->arParams['SORT']['ELEMENTS'],
-            $this->bitrix->arParams['PAGINATION'],
-            $this->bitrix->arParams['IMG_CACHE']['ELEMENTS']
-        );
-
-        $this->pagination = $items['PAGINATION'];
-
-        return $items['ITEMS'];
-    }
-
-    /**
-     * Устанавливает всю мета информацию включая хлебные крошки
-     * 
-     * @global CMain $APPLICATION
-     */
-    protected function setMetaInfo()
-    {
-        global $APPLICATION;
-
-        $iprops = $this->bitrix->arResult['IPROPERTY_VALUES'];
-
-        // Установим TITLE
-        if (!empty($iprops['SECTION_PAGE_TITLE'])) {
-            $APPLICATION->SetTitle($iprops['SECTION_PAGE_TITLE']);
-        } else {
-            $APPLICATION->SetTitle($this->bitrix->arResult['SECTION']['NAME']);
+        foreach ($sectionPath as $sect) {
+            $this->component->addBreadcrumbs($sect['NAME'], $sect['SECTION_PAGE_URL']);
         }
 
-        if (is_array($iprops['SECTION_META_TITLE'])) {
-            $APPLICATION->SetPageProperty('title', implode(' ', $iprops['SECTION_META_TITLE']));
-        } elseif (!empty($iprops['SECTION_META_TITLE'])) {
-            $APPLICATION->SetPageProperty('title', $iprops['SECTION_META_TITLE']);
-        }
-
-        // Установим Keywords
-        if (is_array($iprops['SECTION_META_KEYWORDS'])) {
-            $APPLICATION->SetPageProperty('keywords', implode(' ', $iprops['SECTION_META_KEYWORDS']));
-        } elseif (!empty($iprops['SECTION_META_KEYWORDS'])) {
-            $APPLICATION->SetPageProperty('keywords', $iprops['SECTION_META_KEYWORDS']);
-        }
-                
-        // Установим Description
-        if (is_array($iprops['SECTION_META_DESCRIPTION'])) {
-            $APPLICATION->SetPageProperty('description', implode(' ', $iprops['SECTION_META_DESCRIPTION']));
-        } elseif (!empty($iprops['SECTION_META_DESCRIPTION'])) {
-            $APPLICATION->SetPageProperty('description', $iprops['SECTION_META_DESCRIPTION']);
-        }
-        
-        // Установим хлебные крошки
-        $section_path = $this->bitrix->arResult['SECTION_PATH'];
-
-        foreach ($section_path as $section) {
-            $APPLICATION->AddChainItem(
-                $section['NAME'], $section['SECTION_PAGE_URL']
-            );
-        }
-
-        $APPLICATION->AddChainItem(
-            $this->bitrix->arResult['SECTION']['NAME'],
-            $this->bitrix->arResult['SECTION']['SECTION_PAGE_URL']
-        );
+        $this->component->addBreadcrumbs($section['NAME'], $section['SECTION_PAGE_URL']);
     }
 }

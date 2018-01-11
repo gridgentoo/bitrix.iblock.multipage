@@ -1,33 +1,25 @@
 <?php
 
-namespace IblockMultipageComponent\Controllers;
+namespace Falur\Bitrix\Components\IblockMultipage\Controllers;
 
-use Falur\Bitrix\Iblock\Sections;
+use Falur\Bitrix\Components\IblockMultipage\Services\Sections as SectionsService;
+use Falur\Bitrix\Components\IblockMultipage\Services\Elements as ElementsService;
+use Falur\Bitrix\Support\Component\BaseController;
 
+/**
+ * Class CategoriesController
+ * @package Falur\Bitrix\Components\IblockMultipage\Controllers
+ * @property \IblockMultipageComponent $component
+ * @property SectionsService $sections
+ * @property ElementsService $elements
+ */
 class CategoriesController extends BaseController
 {
-    /**
-     *
-     * @global CMain $APPLICATION
-     */
-	public function indexAction()
+	public function index()
 	{
-		global $APPLICATION;
-		
-		if ($this->bitrix->StartResultCache(false, $APPLICATION->GetCurDir())) {
-			$this->bitrix->arResult = Sections::getSections(
-				[
-					'IBLOCK_ID'     => $this->bitrix->arParams['IBLOCK_ID'],
-					'ACTIVE'        => 'Y',
-					'GLOBAL_ACTIVE' => 'Y',
-					'CNT_ACTIVE'    => 'Y',
-					'DEPTH_LEVEL'   => 1
-				],
-				$this->bitrix->arParams['SORT']['CATEGORIES'],
-				$this->bitrix->arParams['IMG_CACHE']['CATEGORIES']
-			);
-
-			$this->bitrix->IncludeComponentTemplate('categories');
-		}
+        if ($this->component->startResultCache(false, application()->GetCurDir())) {
+            $sections = $this->sections->allFirstLevel();
+            $this->component->view('categories', ['SECTIONS' => $sections]);
+        }
 	}
 }

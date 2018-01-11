@@ -1,151 +1,57 @@
 <?php
 
-use Symfony\Component\ClassLoader\Psr4ClassLoader;
+use Falur\Bitrix\Support\Component\MultiPageComponent;
 
-class IblockMultipageComponent extends CBitrixComponent
+class IblockMultipageComponent extends MultiPageComponent
 {
-    public function registerAutoload()
+    protected $namespace = '\\Falur\\Bitrix\\Components\\IblockMultipage\\Controllers\\';
+
+    protected function requiredParams(): array
     {
-        $loader = new Psr4ClassLoader();
-
-        $loader->addPrefix('IblockMultipageComponent', __DIR__);
-
-        $loader->register();
-    }
-
-    public function executeAction($bitrix, $slim, $controller, $action)
-    {
-        $controller = "IblockMultipageComponent\\Controllers\\{$controller}Controller";
-        $action     = "{$action}Action";
-
-        $c = new $controller($bitrix, $slim);
-
-        if ($c->beforeExecuteAction()) {
-            $c->$action();
-        }
-
-        $c->afterExecuteAction();
-    }
-
-    public function getRoutes()
-    {
-        if (!empty($this->arParams['ROUTES'])) {
-            return $this->arParams['ROUTES'];
-        }
-
-        if (isset($this->arParams['CATEGORIES']) && $this->arParams['CATEGORIES'] == 'Y') {
-            if (isset($this->arParams['FIRST_PAGE']) && $this->arParams['FIRST_PAGE'] == 'ELEMENTS') {
-                return [
-                    [
-                        'METHOD' => 'GET, POST',
-                        'URL' => '/',
-                        'NAME' => 'elements',
-                        'CONTROLLER' => 'Elements',
-                        'ACTION' => 'index'
-                    ],
-                    [
-                        'METHOD' => 'GET, POST',
-                        'URL' => '/:category',
-                        'NAME' => 'category',
-                        'CONTROLLER' => 'Category',
-                        'ACTION' => 'index'
-                    ],
-                    [
-                        'METHOD' => 'GET, POST',
-                        'URL' => '/:category/:element',
-                        'NAME' => 'element',
-                        'CONTROLLER' => 'Element',
-                        'ACTION' => 'index'
-                    ],
-                ];
-            }
-
-            return [
-                [
-                    'METHOD' => 'GET, POST',
-                    'URL' => '/',
-                    'NAME' => 'categories',
-                    'CONTROLLER' => 'Categories',
-                    'ACTION' => 'index'
-                ],
-                [
-                    'METHOD' => 'GET, POST',
-                    'URL' => '/:category',
-                    'NAME' => 'category',
-                    'CONTROLLER' => 'Category',
-                    'ACTION' => 'index'
-                ],
-                [
-                    'METHOD' => 'GET, POST',
-                    'URL' => '/:category/:element',
-                    'NAME' => 'element',
-                    'CONTROLLER' => 'Element',
-                    'ACTION' => 'index'
-                ],
-            ];
-        }
-
         return [
-            [
-                'METHOD' => 'GET, POST',
-                'URL' => '/',
-                'NAME' => 'elements',
-                'CONTROLLER' => 'Elements',
-                'ACTION' => 'index'
-            ],
-            [
-                'METHOD' => 'GET, POST',
-                'URL' => '/:element',
-                'NAME' => 'element',
-                'CONTROLLER' => 'Element',
-                'ACTION' => 'index'
-            ],
+            'IBLOCK_TYPE',
+            'IBLOCK_ID',
         ];
     }
 
-    public function executeComponent()
+    protected function params(): array
     {
-        $this->registerAutoload();
+        return [
+            'CACHE_TYPE' => 'A',
+            'CACHE_TIME' => 3600,
+            'ELEMENTS_SORT_BY_1' => 'SORT',
+            'ELEMENTS_SORT_ORDER_1' => 'ASC',
+            'ELEMENTS_SORT_BY_2' => 'NAME',
+            'ELEMENTS_SORT_ORDER_2' => 'ASC',
+            'SORT_CATEGORIES_BY' => 'SORT',
+            'SORT_CATEGORIES_ORDER' => 'ASC',
+            'ACTIVE_DATE' => 'N',
+            'PAGINATION_COUNT' => 10,
+            'PAGINATION_TEMPLATE' => '',
+            'PAGINATION_NAME' => 'Страницы',
+            'ADD_CACHE_STRING' => ''
+        ];
+    }
 
-        $slim   = new \Slim\Slim();
-        $routes = $this->getRoutes();
-        $bitrix = $this;
-        $sef    = rtrim($this->arParams['SEF_URL'], '/');
+    protected function modules(): array
+    {
+        return ['iblock'];
+    }
 
-        foreach ($routes as $route) {
-            $url = $route['URL'] != '/' ? $sef.$route['URL'] : $route['URL'];
-            $url .= '(/(index.php))';
-
-            if ($route['METHOD'] == 'GET, POST') {
-                $slim->map($url,
-                    function() use($bitrix, $slim, $route) {
-
-                    $bitrix->executeAction(
-                        $bitrix,
-                        $slim,
-                        $route['CONTROLLER'],
-                        $route['ACTION']
-                    );
-                })->via('GET', 'POST')->name($route['NAME']);
-            } else {
-                $method = strtolower($route['METHOD']);
-                $slim->$method($url,
-                    function() use($bitrix, $slim, $route) {
-
-                    $bitrix->executeAction(
-                        $bitrix,
-                        $slim,
-                        $route['CONTROLLER'],
-                        $route['ACTION']
-                    );
-                })->name($route['NAME']);
-            }
+    protected function registerRoutes()
+    {
+        if ($this->param('CATEGORIES') == 'Y') {
+            $this->slim->any('/', $this->action('CategoriesController', 'index'));
+            $this->slim->any('/{category}', $this->action('CategoryController', 'index'));
+            $this->slim->any('/{category}/{element}', $this->action('ElementController', 'index'));
+        } else {
+            $this->slim->any('/', $this->action('CategoryController', 'index'));
+            $this->slim->any('/{element}', $this->action('ElementController', 'index'));
         }
+    }
 
-        $slim->notFound(function() use($bitrix) {
-            $bitrix->IncludeComponentTemplate('404');
-        });
-
-        $slim->run();
+    protected function action(string $controller, string $action)
+    {
+        return  $this->namespace . $controller . ':' . $action;
     }
 }

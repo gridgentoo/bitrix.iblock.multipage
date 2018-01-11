@@ -1,116 +1,68 @@
 <?php
 
-namespace IblockMultipageComponent\Controllers;
+namespace Falur\Bitrix\Components\IblockMultipage\Controllers;
 
 use Bitrix\Iblock\InheritedProperty\ElementValues;
-use Falur\Bitrix\Iblock\Elements;
-use Falur\Bitrix\Iblock\Sections;
+use Falur\Bitrix\Components\IblockMultipage\Services\Sections as SectionsService;
+use Falur\Bitrix\Components\IblockMultipage\Services\Elements as ElementsService;
+use Falur\Bitrix\Support\Component\BaseController;
 
+/**
+ * Class ElementController
+ * @package Falur\Bitrix\Components\IblockMultipage\Controllers
+ * @property \IblockMultipageComponent $component
+ * @property SectionsService $sections
+ * @property ElementsService $elements
+ */
 class ElementController extends BaseController
 {
-	public function indexAction()
+    /**
+     * @param $request
+     * @param $response
+     * @param $args
+     * @throws \Slim\Exception\NotFoundException
+     */
+    public function index($request, $response, $args)
 	{
-		global $APPLICATION;
-
-        $curdir = $APPLICATION->GetCurDir();
-
-		if ($this->bitrix->StartResultCache(false, $curdir)) {
-			$this->bitrix->arResult = $this->getElement();
+		if ($this->bitrix->StartResultCache(false, application()->GetCurDir())) {
+		    $item = $this->elements->one($args['element']);
+			$this->notFoundExceptionIf(!$item);
 			
-			if (empty($this->bitrix->arResult) || $this->bitrix->arResult['DETAIL_PAGE_URL'] != $curdir) {
-                return $this->error404();
-            }	
+			$iprops = (new ElementValues($item['IBLOCK_ID'], $item['ID']))->getValues();
+			$sectionPath = \CIBlockSection::GetNavChain($item['IBLOCK_ID'], $item['IBLOCK_SECTION_ID']);
 			
-			$this->bitrix->arResult['IPROPERTY_VALUES'] = 
-				(new ElementValues(
-                    $this->bitrix->arResult['IBLOCK_ID'],
-                    $this->bitrix->arResult['ID']
-				))->getValues();
-			
-			$this->bitrix->arResult['SECTION_PATH'] = 
-				Sections::getPath(
-					$this->bitrix->arParams['IBLOCK_ID'], 
-					$this->bitrix->arResult['IBLOCK_SECTION_ID']
-				);
-			
-			$this->bitrix->SetResultCacheKeys([
-                'ID', 'NAME', 'DETAIL_PAGE_URL', 'IPROPERTY_VALUES', 'SECTION_PATH'
-            ]);
+			$this->bitrix->SetResultCacheKeys(['ID', 'NAME', 'DETAIL_PAGE_URL', 'IPROPERTY_VALUES', 'SECTION_PATH']);
             
-			$this->bitrix->IncludeComponentTemplate('element');
+			$this->component->view('element', $item + [
+			    'IPROPERTY_VALUES' => $iprops,
+			    'SECTION_PATH' => $sectionPath,
+            ]);
 		}
 		
-		$this->setMetaInfo();
+		$this->setMeta();
+        $this->setBreadcrumbs();
 	}
-	
-	/**
-	 * Получить информацию по текущему элементу
-	 * 
-	 * @return array
-	 */
-	protected function getElement()
+
+	protected function setMeta()
 	{
-		$element_code = $this->slim->router->getCurrentRoute()->getParam('element');
-		
-		return Elements::getElement(
-			[
-				'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
-				'ACTIVE' => 'Y',
-				'CODE' => $element_code
-			],
-			$this->bitrix->arParams['IMG_CACHE']['ELEMENT']
-		);
+        $iprops = $this->component->arResult['IPROPERTY_VALUES'];
+        $item = $this->component->arResult;
+
+        $this->component->setTitle($iprops['ELEMENT_PAGE_TITLE'] ?: $item['NAME']);
+        $this->component->setMeta('title', $iprops['ELEMENT_META_TITLE']);
+        $this->component->setMeta('keywords', $iprops['ELEMENT_META_KEYWORDS']);
+        $this->component->setMeta('description', $iprops['ELEMENT_META_DESCRIPTION']);
 	}
-	
-	/**
-	 * Устанавливает всю мета информацию включая хлебные крошки
-	 * 
-	 * @global CMain $APPLICATION
-	 */
-	protected function setMetaInfo()
-	{
-		global $APPLICATION;
-		
-		$iprops = $this->bitrix->arResult['IPROPERTY_VALUES'];
 
-		// Установим TITLE
-		if (!empty($iprops['ELEMENT_PAGE_TITLE']))
-			$APPLICATION->SetTitle($iprops['ELEMENT_PAGE_TITLE']);
-		else
-			$APPLICATION->SetTitle($this->bitrix->arResult['NAME']);
+    protected function setBreadcrumbs()
+    {
+        $sectionPath = $this->component->arResult['SECTION_PATH'];
+        $item = $this->component->arResult;
 
-		if (is_array($iprops['ELEMENT_META_TITLE']))
-			$APPLICATION->SetPageProperty('title', implode(' ', $iprops['ELEMENT_META_TITLE']));
-		elseif (!empty($iprops['ELEMENT_META_TITLE']))
-			$APPLICATION->SetPageProperty('title', $iprops['ELEMENT_META_TITLE']);
+        foreach ($sectionPath as $sect) {
+            $this->component->addBreadcrumbs($sect['NAME'], $sect['SECTION_PAGE_URL']);
+        }
 
-		// Установим Keywords 
-		if (is_array($iprops['ELEMENT_META_KEYWORDS']))
-			$APPLICATION->SetPageProperty('keywords', implode(' ', $iprops['ELEMENT_META_KEYWORDS']));
-		elseif (!empty($iprops['ELEMENT_META_KEYWORDS']))
-			$APPLICATION->SetPageProperty('keywords', $iprops['ELEMENT_META_KEYWORDS']);
-
-		// Установим Description
-		if (is_array($iprops['ELEMENT_META_DESCRIPTION']))
-			$APPLICATION->SetPageProperty('description', implode(' ', $iprops['ELEMENT_META_DESCRIPTION']));
-		elseif (!empty($iprops['ELEMENT_META_DESCRIPTION']))
-			$APPLICATION->SetPageProperty('description', $iprops['ELEMENT_META_DESCRIPTION']);
-
-
-		// Установим хлебные крошки		
-		$section_path = $this->bitrix->arResult['SECTION_PATH'];
-
-		foreach ($section_path as $section) {
-			$APPLICATION->AddChainItem(
-				$section['NAME'], 
-				$section['SECTION_PAGE_URL']
-			);
-		}
-
-		// Элемент
-		$APPLICATION->AddChainItem(
-			$this->bitrix->arResult['NAME'], 
-			$this->bitrix->arResult['DETAIL_PAGE_URL']
-		);	
-	}
+        $this->component->addBreadcrumbs($item['NAME'], $item['SECTION_PAGE_URL']);
+    }
 }

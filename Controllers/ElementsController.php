@@ -1,40 +1,35 @@
 <?php
 
-namespace IblockMultipageComponent\Controllers;
+namespace Falur\Bitrix\Components\IblockMultipage\Controllers;
 
-use Falur\Bitrix\Iblock\Elements;
 use CDBResult;
+use Falur\Bitrix\Components\IblockMultipage\Services\Sections as SectionsService;
+use Falur\Bitrix\Components\IblockMultipage\Services\Elements as ElementsService;
+use Falur\Bitrix\Support\Component\BaseController;
 
+/**
+ * Class ElementsController
+ * @package Falur\Bitrix\Components\IblockMultipage\Controllers
+ * @property \IblockMultipageComponent $component
+ * @property SectionsService $sections
+ * @property ElementsService $elements
+ */
 class ElementsController extends BaseController
 {
-	public function indexAction()
-	{
-		global $APPLICATION;
-		
-		$filter_get = isset($this->bitrix->arParams['FILTER']) ? $this->bitrix->arParams['FILTER'] : [];
-		
-		$pages_count = $this->bitrix->arParams['PAGINATION']['COUNT'] ?: 10;
-		$nav = CDBResult::NavStringForCache($pages_count);
-		$cache_id = $APPLICATION->GetCurDir() . $nav . implode('', $filter_get);
-		
-		if ( $this->bitrix->StartResultCache(false, $cache_id) )
-		{
-			$filter_standart = [
-				'IBLOCK_ID' => $this->bitrix->arParams['IBLOCK_ID'],
-				'ACTIVE' => 'Y',
-				'ACTIVE_DATE' => $this->bitrix->arParams['ACTIVE_DATE'] ?: ''
-			];
-			
-			$filter = array_merge($filter_standart, $filter_get);
-			
-			$this->bitrix->arResult = Elements::getElements(
-				$filter, 
-				$this->bitrix->arParams['SORT']['ELEMENTS'], 
-				$this->bitrix->arParams['PAGINATION'],
-				$this->bitrix->arParams['IMG_CACHE']['ELEMENTS']
-			);
+    public function index()
+    {
+        $additionalFilter = $this->component->param('FILTER', []);
+        $paginationCount = $this->component->param('PAGINATION_COUNT');
+        $nav = CDBResult::NavStringForCache($paginationCount);
+        $cacheId = application()->GetCurDir() . $nav . implode('', $additionalFilter);
 
-			$this->bitrix->IncludeComponentTemplate('elements');
-		}
-	}
+        if ($this->component->startResultCache(false, $cacheId)) {
+            [$items, $pagination] = $this->elements->withPagination($additionalFilter);
+
+            $this->component->view('elements', [
+                'ITEMS'            => $items,
+                'PAGINATION'       => $pagination,
+            ]);
+        }
+    }
 }
